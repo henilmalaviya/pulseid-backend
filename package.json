@@ -2,7 +2,8 @@
   "name": "pulseid-backend",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "prepare": "bun x prisma db generate"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
