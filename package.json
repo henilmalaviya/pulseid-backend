@@ -3,7 +3,7 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
-    "prepare": "bun x prisma db generate"
+    "prepare": "bun x prisma generate"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
