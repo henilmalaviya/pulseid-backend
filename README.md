@@ -5,11 +5,13 @@ A medical information management system that allows users to register, store med
 ## Setup
 
 To install dependencies:
+
 ```sh
 bun install
 ```
 
 To run:
+
 ```sh
 bun run dev
 ```
@@ -21,6 +23,7 @@ Open http://localhost:3000
 ### Health Check
 
 #### `GET /`
+
 - **Description**: Health check endpoint
 - **Response**: Returns "PulseID Backend API" text
 - **Authentication**: None required
@@ -30,6 +33,7 @@ Open http://localhost:3000
 ### User Registration Routes
 
 #### `POST /user`
+
 - **Description**: Initiate user registration process
 - **Body**:
   ```json
@@ -44,17 +48,12 @@ Open http://localhost:3000
     "userId": "string" // UUID of created/existing user
   }
   ```
-- **Process**:
-  1. Checks if user already exists with the phone number
-  2. Creates new user if doesn't exist (with `isPhoneNumberVerified: false`)
-  3. Generates 6-digit OTP with 10-minute expiry
-  4. Stores OTP in `PhoneVerification` table
-  5. Sends OTP via SMS using Fast2SMS
 - **Error Responses**:
   - `400`: Phone number is required
   - `500`: Internal server error
 
 #### `POST /user/:id/verify`
+
 - **Description**: Verify phone number using OTP received during registration
 - **Parameters**:
   - `id`: User ID (from registration response)
@@ -70,11 +69,6 @@ Open http://localhost:3000
     "message": "Phone number verified successfully"
   }
   ```
-- **Process**:
-  1. Validates OTP against stored verification code
-  2. Checks if OTP hasn't expired (10-minute window)
-  3. Marks user's `isPhoneNumberVerified` as `true`
-  4. Deletes the used verification record
 - **Error Responses**:
   - `400`: OTP is required / Invalid or expired OTP
   - `500`: Internal server error
@@ -84,6 +78,7 @@ Open http://localhost:3000
 ### Authentication Routes
 
 #### `POST /login`
+
 - **Description**: Begin login process for verified users
 - **Body**:
   ```json
@@ -98,18 +93,13 @@ Open http://localhost:3000
     "loginRequestId": "string" // UUID for login verification
   }
   ```
-- **Process**:
-  1. Finds user by phone number
-  2. Checks if user exists and phone is verified
-  3. Generates 6-digit login OTP with 10-minute expiry
-  4. Stores in `LoginVerificationRequest` table
-  5. Sends OTP via SMS
 - **Error Responses**:
   - `400`: Phone number is required / Phone number not verified
   - `404`: User not found
   - `500`: Internal server error
 
 #### `POST /login/:id/verify`
+
 - **Description**: Verify login OTP and create session
 - **Parameters**:
   - `id`: Login request ID (from login response)
@@ -129,16 +119,12 @@ Open http://localhost:3000
     }
   }
   ```
-- **Process**:
-  1. Validates login OTP
-  2. Creates session with 30-day expiry
-  3. Sets secure HTTP-only session cookie
-  4. Deletes used login request
 - **Error Responses**:
   - `400`: OTP is required / Invalid or expired OTP
   - `500`: Internal server error
 
 #### `POST /logout`
+
 - **Description**: Logout user and clear session
 - **Authentication**: Optional (works with or without valid session)
 - **Response**:
@@ -147,16 +133,13 @@ Open http://localhost:3000
     "message": "Logged out successfully"
   }
   ```
-- **Process**:
-  1. Gets session ID from cookie
-  2. Deletes session from database
-  3. Clears session cookie
 
 ---
 
 ### Profile Management Routes
 
 #### `GET /user/:id`
+
 - **Description**: Get user profile information (public view with authenticated enhancement)
 - **Parameters**:
   - `id`: User ID
@@ -166,7 +149,7 @@ Open http://localhost:3000
   {
     "id": "string",
     "firstName": "string",
-    "lastName": "string", 
+    "lastName": "string",
     "bloodType": "string",
     "isPhoneNumberVerified": "boolean"
   }
@@ -197,6 +180,7 @@ Open http://localhost:3000
   - `500`: Internal server error
 
 #### `PUT /user/:id`
+
 - **Description**: Update user profile information
 - **Parameters**:
   - `id`: User ID
@@ -223,14 +207,11 @@ Open http://localhost:3000
   ```json
   {
     "message": "User updated successfully",
-    "user": { /* full user object */ }
+    "user": {
+      /* full user object */
+    }
   }
   ```
-- **Process**:
-  1. Validates user is authenticated
-  2. Ensures user can only update their own profile
-  3. Filters allowed fields only
-  4. Updates user record
 - **Error Responses**:
   - `400`: No valid fields to update
   - `401`: Authentication required
@@ -242,6 +223,7 @@ Open http://localhost:3000
 ### Webhook Routes
 
 #### `GET /webhook/exotel/incoming-call`
+
 - **Description**: Handle incoming call webhooks from Exotel service
 - **Query Parameters**: Varies based on Exotel webhook format (e.g., `CallFrom`, `From`, etc.)
 - **Authentication**: None (webhook endpoint)
@@ -253,21 +235,6 @@ Open http://localhost:3000
     "smsSent": "boolean" // if SMS was attempted
   }
   ```
-- **Process**:
-  1. Extracts phone number from webhook parameters
-  2. Searches database for user with matching phone number (tries multiple formats)
-  3. **If user found**:
-     - Constructs comprehensive medical information SMS
-     - Includes: name, phone, DOB, blood type, allergies, conditions, medications, address
-     - Sends SMS to user's phone number
-  4. **If user not found**:
-     - Sends SMS informing caller they're not registered
-     - Encourages registration
-- **Phone Number Matching**: Tries multiple formats:
-  - Original number
-  - Cleaned number (digits only)
-  - With +91 prefix
-  - Without leading zero
 - **Error Responses**:
   - `200` with error status (maintains webhook compatibility)
 
