@@ -1,6 +1,23 @@
-// Utility function to generate random OTP
+import { createHash, randomBytes } from "crypto";
+
+// Generate cryptographically secure OTP
 export function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Use crypto.randomBytes for cryptographically secure randomness
+  const buffer = randomBytes(4);
+  const randomNum = buffer.readUInt32BE(0);
+  // Ensure 6 digits by using modulo and padding
+  const otp = ((randomNum % 900000) + 100000).toString();
+  return otp;
+}
+
+// Generate a secure random string for dummy IDs
+export function generateDummyId(): string {
+  return randomBytes(16).toString("hex");
+}
+
+// Hash phone number for logging without exposing actual number
+export function hashPhoneNumber(phoneNumber: string): string {
+  return createHash("sha256").update(phoneNumber).digest("hex").substring(0, 8);
 }
 
 // Utility function to send SMS via Fast2SMS QuickSMS
@@ -23,7 +40,9 @@ export async function sendSMS(
       .replace(/^0+/, "");
 
     if (cleanedNumber.length !== 10) {
-      console.error("Invalid phone number format");
+      console.error(
+        `Invalid phone number format for ${hashPhoneNumber(phoneNumber)}`
+      );
       return false;
     }
 
@@ -45,14 +64,20 @@ export async function sendSMS(
     const result = await response.json();
 
     if (result.return === true) {
-      console.log(`SMS sent successfully to ${cleanedNumber}`);
+      console.log(`SMS sent successfully to ${hashPhoneNumber(phoneNumber)}`);
       return true;
     } else {
-      console.error("Failed to send SMS:", result);
+      console.error(
+        `Failed to send SMS to ${hashPhoneNumber(phoneNumber)}:`,
+        result.message || "Unknown error"
+      );
       return false;
     }
   } catch (error) {
-    console.error("Error sending SMS:", error);
+    console.error(
+      `Error sending SMS to ${hashPhoneNumber(phoneNumber)}:`,
+      error
+    );
     return false;
   }
 }

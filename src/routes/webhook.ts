@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { prisma } from "../utils/database";
-import { sendSMS } from "../utils/sms";
+import { sendSMS, hashPhoneNumber } from "../utils/sms";
 
 const webhookRoutes = new Hono();
 
@@ -10,7 +10,8 @@ webhookRoutes.get("/exotel/incoming-call", async (c) => {
     const url = new URL(c.req.url);
     const allParams = Object.fromEntries(url.searchParams.entries());
 
-    console.log(allParams);
+    // Log webhook received without exposing sensitive data
+    console.log("Webhook received from Exotel");
 
     // Extract phone number from the incoming call
     const incomingPhoneNumber = allParams.CallFrom || allParams.From;
@@ -81,6 +82,12 @@ webhookRoutes.get("/exotel/incoming-call", async (c) => {
         // Send SMS with user information
         const smsResult = await sendSMS(user.phoneNumber, userInfo);
 
+        console.log(
+          `Emergency info sent to registered user ${hashPhoneNumber(
+            user.phoneNumber
+          )}`
+        );
+
         return c.json({
           status: "success",
           message: "User found and SMS sent",
@@ -88,9 +95,15 @@ webhookRoutes.get("/exotel/incoming-call", async (c) => {
         });
       } else {
         // Send SMS to inform that user is not registered
-        const notFoundMessage = `Hello! We received a call from your number (${incomingPhoneNumber}), but you don't appear to be registered with PulseID. Please register at our platform to access your medical information.`;
+        const notFoundMessage = `Hello! We received a call from your number, but you don't appear to be registered with PulseID. Please register at our platform to access your medical information during emergencies.`;
 
         const smsResult = await sendSMS(incomingPhoneNumber, notFoundMessage);
+
+        console.log(
+          `Emergency call from unregistered number ${hashPhoneNumber(
+            incomingPhoneNumber
+          )}`
+        );
 
         return c.json({
           status: "success",
@@ -100,17 +113,20 @@ webhookRoutes.get("/exotel/incoming-call", async (c) => {
       }
     }
 
+    console.log("Webhook processed but no phone number found in parameters");
+
     return c.json({
       status: "success",
       message: "Webhook processed",
     });
   } catch (error) {
+    console.error("Error processing webhook:", error);
     return c.json(
       {
         status: "error",
         message: "Webhook processing failed",
       },
-      200
+      200 // Return 200 to prevent webhook retries
     );
   }
 });
