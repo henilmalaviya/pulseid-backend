@@ -1,10 +1,21 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import userRoutes from "./routes/user";
 import profileRoutes from "./routes/profile";
 import authRoutes from "./routes/auth";
 import webhookRoutes from "./routes/webhook";
 
 const app = new Hono();
+
+// Enable CORS for all origins
+app.use(
+  "*",
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Mount route modules
 app.route("/user", userRoutes); // Handles POST /user, POST /user/:id/verify
