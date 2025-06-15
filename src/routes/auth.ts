@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { prisma } from "../utils/database";
 import {
   generateOTP,
@@ -214,15 +213,6 @@ authRoutes.post("/login/:id/verify", verifyRateLimiter, async (c) => {
       },
     });
 
-    // Set secure session cookie
-    setCookie(c, "session_id", session.id, {
-      httpOnly: true,
-      secure: false, // Set to false for localhost development
-      sameSite: "Lax", // Use Lax for localhost development
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: "/",
-    });
-
     // Delete used login request
     await prisma.loginVerificationRequest.delete({
       where: { id: loginRequest.id },
@@ -232,8 +222,10 @@ authRoutes.post("/login/:id/verify", verifyRateLimiter, async (c) => {
       `Successful login for ${hashPhoneNumber(loginRequest.user.phoneNumber)}`
     );
 
+    // Return session token in response instead of setting cookie
     return c.json({
       message: "Login successful",
+      sessionToken: session.id, // Send session ID as token
       user: {
         id: loginRequest.user.id,
         phoneNumber: loginRequest.user.phoneNumber,
@@ -245,20 +237,19 @@ authRoutes.post("/login/:id/verify", verifyRateLimiter, async (c) => {
   }
 });
 
-// POST /logout - Logout and clear session
+// POST /logout - Logout and invalidate session
 authRoutes.post("/logout", async (c) => {
   try {
-    const sessionId = getCookie(c, "session_id");
+    const authHeader = c.req.header("Authorization");
 
-    if (sessionId) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const sessionId = authHeader.substring(7);
+
       // Delete session from database
       await prisma.session.deleteMany({
         where: { id: sessionId },
       });
     }
-
-    // Clear session cookie
-    deleteCookie(c, "session_id");
 
     return c.json({ message: "Logged out successfully" });
   } catch (error) {

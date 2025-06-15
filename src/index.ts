@@ -25,7 +25,7 @@ const getAllowedOrigins = (): string[] => {
   ];
 };
 
-// Enable CORS with configurable origins
+// Enable CORS for header-based authentication (no credentials needed)
 app.use(
   "*",
   cors({
@@ -37,10 +37,8 @@ app.use(
 
       return allowedOrigins.includes(origin) ? origin : null;
     },
-    credentials: true, // This is crucial for cookies
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    exposeHeaders: ["Set-Cookie"],
+    allowHeaders: ["Content-Type", "Authorization"], // Authorization header for tokens
   })
 );
 

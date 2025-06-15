@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getCookie } from "hono/cookie";
 import { prisma } from "../utils/database";
 import { requireAuth } from "../middleware/auth";
 
@@ -9,11 +8,12 @@ const profileRoutes = new Hono();
 profileRoutes.get("/:id", async (c) => {
   try {
     const userId = c.req.param("id");
-    const sessionId = getCookie(c, "session_id");
+    const authHeader = c.req.header("Authorization");
 
     // Check if user is authenticated (optional for additional info)
     let isAuthenticated = false;
-    if (sessionId) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const sessionId = authHeader.substring(7);
       const session = await prisma.session.findFirst({
         where: {
           id: sessionId,

@@ -28,6 +28,33 @@ Open http://localhost:3000
 - **Progressive Account Lockout**: Automatic lockout with exponential backoff after failed attempts
 - **Input Validation**: Comprehensive validation for phone numbers and OTP format
 - **Privacy-Focused Logging**: Phone numbers are hashed in logs for security
+- **Token-Based Authentication**: JWT-style session tokens sent via Authorization header for secure API access
+
+## Authentication System
+
+This API uses **header-based authentication** with session tokens:
+
+- **Login Process**: Users receive a `sessionToken` after successful OTP verification
+- **API Requests**: Include session token in `Authorization: Bearer <token>` header
+- **Session Management**: Tokens expire after 30 days and can be revoked via logout
+- **Security**: No cookies used, making it compatible with CORS and mobile applications
+
+### Frontend Integration Example
+
+```javascript
+// After successful login, store the token
+localStorage.setItem("sessionToken", data.sessionToken);
+
+// Include token in API requests
+fetch("/user/123", {
+  method: "PUT",
+  headers: {
+    Authorization: `Bearer ${sessionToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(updateData),
+});
+```
 
 ## API Routes
 
@@ -131,6 +158,7 @@ Open http://localhost:3000
   ```json
   {
     "message": "Login successful",
+    "sessionToken": "string", // Session token for authentication
     "user": {
       "id": "string",
       "phoneNumber": "string"
@@ -144,8 +172,12 @@ Open http://localhost:3000
 
 #### `POST /logout`
 
-- **Description**: Logout user and clear session
-- **Authentication**: Optional (works with or without valid session)
+- **Description**: Logout user and invalidate session token
+- **Authentication**: Optional - include `Authorization: Bearer <token>` header to invalidate specific session
+- **Headers**:
+  ```
+  Authorization: Bearer <sessionToken> // Optional: token to invalidate
+  ```
 - **Response**:
   ```json
   {
@@ -162,7 +194,11 @@ Open http://localhost:3000
 - **Description**: Get user profile information (public view with authenticated enhancement)
 - **Parameters**:
   - `id`: User ID
-- **Authentication**: Optional (provides additional data if authenticated as same user)
+- **Authentication**: Optional - include `Authorization: Bearer <token>` header for enhanced data
+- **Headers (Optional)**:
+  ```
+  Authorization: Bearer <sessionToken> // For authenticated access to full profile
+  ```
 - **Response (Public)**:
   ```json
   {
@@ -203,7 +239,12 @@ Open http://localhost:3000
 - **Description**: Update user profile information
 - **Parameters**:
   - `id`: User ID
-- **Authentication**: Required (can only update own profile)
+- **Authentication**: Required - must include valid session token
+- **Headers**:
+  ```
+  Authorization: Bearer <sessionToken> // Required
+  Content-Type: application/json
+  ```
 - **Body** (all fields optional):
   ```json
   {
@@ -286,6 +327,14 @@ Open http://localhost:3000
 - Phone number format: `+?[1-9]\d{1,14}` (10-15 digits)
 - OTP format: exactly 6 digits
 
+### Session Token Security
+
+- **Token Format**: UUID-based session identifiers (not JWT for database validation)
+- **Storage**: Session tokens stored in database with expiry timestamps
+- **Validation**: Each request validates token existence and expiry
+- **Revocation**: Tokens can be invalidated through logout or database cleanup
+- **Expiry**: 30-day session lifetime with automatic cleanup of expired sessions
+
 ## Database Schema
 
 The application uses Prisma with PostgreSQL and includes these main models:
@@ -300,19 +349,29 @@ The application uses Prisma with PostgreSQL and includes these main models:
 Required environment variables:
 
 ```env
+# Database Configuration
 DATABASE_URL="postgres://username:password@host:port/database"
+
+# SMS Service Configuration
 FAST2SMS_API_KEY="your-fast2sms-api-key"
 FAST2SMS_SENDER_ID="FSTSMS"
+
+# CORS Configuration (comma-separated origins)
+ALLOWED_ORIGINS="http://localhost:5500,http://127.0.0.1:5500,https://yourdomain.com"
+
+# Environment
+NODE_ENV="development" # or "production"
 ```
 
 ## Features
 
 - **Phone-based Authentication**: Secure OTP verification for registration and login
+- **Token-Based Sessions**: Header-based authentication using session tokens
 - **Medical Information Storage**: Comprehensive medical profile management
 - **Emergency Access**: Phone call webhook integration for emergency medical info access
 - **Rate-Limited Security**: Protection against SMS bombing and brute force attacks
 - **Anti-Enumeration**: Privacy protection against phone number discovery
-- **Secure Sessions**: HTTP-only cookies with 30-day expiry
+- **Cross-Origin Support**: CORS-enabled API with configurable origins
 - **SMS Integration**: Fast2SMS service for OTP and information delivery
 - **Flexible Phone Number Matching**: Handles various international formats
 - **Progressive Lockout**: Automatic account protection with exponential backoff
