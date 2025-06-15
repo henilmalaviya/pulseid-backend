@@ -26,6 +26,18 @@ export async function sendSMS(
   message: string
 ): Promise<boolean> {
   try {
+    // Check if SMS sending is disabled
+    const smsDisabled = process.env.DISABLE_SMS === "true";
+
+    if (smsDisabled) {
+      console.log(
+        `SMS sending disabled. msg would be sent to ${hashPhoneNumber(
+          phoneNumber
+        )}: ${message}`
+      );
+      return true; // Return success to allow normal flow
+    }
+
     const apiKey = process.env.FAST2SMS_API_KEY;
 
     if (!apiKey) {
