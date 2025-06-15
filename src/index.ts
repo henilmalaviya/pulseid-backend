@@ -7,14 +7,40 @@ import webhookRoutes from "./routes/webhook";
 
 const app = new Hono();
 
-// Enable CORS for all origins
+// Parse allowed origins from environment variable
+const getAllowedOrigins = (): string[] => {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS;
+  if (allowedOrigins) {
+    return allowedOrigins.split(",").map((origin) => origin.trim());
+  }
+
+  // Fallback to default development origins if not configured
+  return [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ];
+};
+
+// Enable CORS with configurable origins
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: (origin) => {
+      const allowedOrigins = getAllowedOrigins();
+
+      // Allow requests with no origin (like mobile apps, Postman, etc.)
+      if (!origin) return origin;
+
+      return allowedOrigins.includes(origin) ? origin : null;
+    },
+    credentials: true, // This is crucial for cookies
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+    allowHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposeHeaders: ["Set-Cookie"],
   })
 );
 

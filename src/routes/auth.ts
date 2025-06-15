@@ -217,8 +217,8 @@ authRoutes.post("/login/:id/verify", verifyRateLimiter, async (c) => {
     // Set secure session cookie
     setCookie(c, "session_id", session.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      secure: false, // Set to false for localhost development
+      sameSite: "Lax", // Use Lax for localhost development
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: "/",
     });
